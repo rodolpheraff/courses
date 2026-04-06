@@ -35,10 +35,14 @@ button{cursor:pointer;font-family:inherit}
 .settings button{display:block;width:100%;background:none;border:none;color:#ccc;font-size:14px;padding:10px 0;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
 .settings button.danger{color:#e74c3c}
 
-.group-head{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;position:sticky;top:98px;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:5}
+.group-head{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;position:sticky;top:98px;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:5;cursor:pointer;-webkit-user-select:none;user-select:none}
 .group-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.group-label{font-size:13px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
-.group-count{font-size:11px;color:#666;margin-left:auto}
+.group-label{font-size:13px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.5px;flex:1}
+.group-count{font-size:11px;color:#666}
+.group-chevron{font-size:12px;color:#555;margin-left:6px;transition:transform .2s}
+.group-chevron.open{transform:rotate(180deg)}
+.group-items{overflow:hidden;transition:max-height .25s ease}
+.group-items.collapsed{max-height:0!important}
 
 .item{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.04);animation:fadeIn .15s ease}
 .item.done-item{opacity:.4}
@@ -113,7 +117,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const $=s=>document.querySelector(s);
 const esc=s=>s.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,search:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_cur:null};
+let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,search:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_cur:null,_open:{}};
 let syncT=null;
 function cats(){return[...BASE_CAT,...S.cc];}
 function catById(id){return cats().find(c=>c.id===id)||{emoji:"📦",label:id,color:"#7f8c8d"};}
@@ -179,12 +183,17 @@ function renderApp(){
   if(!grouped.length&&!q)list=`<div class="empty"><div style="font-size:64px;margin-bottom:16px">🛒</div><p style="color:#888;font-size:15px">La liste est vide !</p><p style="color:#666;font-size:13px;margin-top:4px">Appuie sur + pour ajouter</p></div>`;
   else if(!grouped.length&&q)list=`<div class="empty"><p style="color:#888;font-size:15px">Aucun résultat pour «\u00a0${esc(q)}\u00a0»</p></div>`;
   else grouped.forEach(g=>{
-    list+=`<div class="group-head"><span class="group-dot" style="background:${g.color}"></span><span class="group-label">${g.emoji} ${esc(g.label)}</span><span class="group-count">${g.u.length}/${g.u.length+g.d.length}</span></div>`;
+    // Default: open if has unchecked items, closed if only checked
+    if(S._open[g.id]===undefined)S._open[g.id]=g.u.length>0;
+    const isOpen=S._open[g.id];
+    list+=`<div class="group-head" data-grp="${g.id}"><span class="group-dot" style="background:${g.color}"></span><span class="group-label">${g.emoji} ${esc(g.label)}</span><span class="group-count">${g.u.length}/${g.u.length+g.d.length}</span><span class="group-chevron${isOpen?" open":""}">▼</span></div>`;
+    list+=`<div class="group-items${isOpen?"":" collapsed"}">`;
     g.u.forEach(i=>{list+=renderItem(i,q,false);});
     if(g.d.length){
       list+=`<div class="sep"><span>fait${g.d.length>1?"s":""}</span></div>`;
       g.d.forEach(i=>{list+=renderItem(i,q,true);});
     }
+    list+=`</div>`;
   });
 
   let addM=S.showAdd?renderAddModal():"";
@@ -255,6 +264,9 @@ function bind(ok){
   document.querySelectorAll("[data-e]").forEach(b=>b.addEventListener("click",()=>{S._ce=b.dataset.e;R();}));
   document.querySelectorAll("[data-cl]").forEach(b=>b.addEventListener("click",()=>{S._ccl=b.dataset.cl;R();}));
   $("#btn-sc")?.addEventListener("click",()=>{const n=$("#inp-cn")?.value.trim();if(!n)return;const id=addCat(n,S._ce,S._ccl);S.showAddCat=false;S.showAdd=true;S._ac=id;R();});
+
+  // Accordion
+  document.querySelectorAll("[data-grp]").forEach(b=>b.addEventListener("click",()=>{S._open[b.dataset.grp]=!S._open[b.dataset.grp];R();}));
 
   // Items
   document.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>toggle(b.dataset.t)));
