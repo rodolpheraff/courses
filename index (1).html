@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Courses">
+<meta name="theme-color" content="#111111">
+<title>Courses à deux</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#111;color:#eee}
+input:focus{outline:none;border-color:#4a7c59!important}
+button{cursor:pointer;font-family:inherit}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+.app{min-height:100vh;max-width:480px;margin:0 auto;padding-bottom:100px;position:relative}
+
+/* Header */
+.header{position:sticky;top:0;z-index:10;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);padding:12px 16px 8px}
+.header-top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.icon-btn{background:none;border:none;color:#aaa;font-size:20px;padding:4px 8px;border-radius:8px}
+.sync-bar{margin-top:4px;font-size:11px;color:#888}
+.sync-bar.error{color:#e74c3c}
+
+/* Settings */
+.settings{background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);padding:8px 16px}
+.settings button{display:block;width:100%;background:none;border:none;color:#ccc;font-size:14px;padding:10px 0;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+.settings button.danger{color:#e74c3c}
+
+/* Groups */
+.group-head{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;position:sticky;top:60px;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:5}
+.group-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.group-label{font-size:13px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
+.group-count{font-size:11px;color:#666;margin-left:auto}
+
+/* Items */
+.item{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.04);animation:fadeIn .2s ease}
+.item.checked{opacity:.45}
+.checkbox{background:none;border:none;padding:0;flex-shrink:0}
+.box{width:22px;height:22px;border-radius:6px;border:2px solid rgba(255,255,255,.2)}
+.box.done{border:none;background:#4a7c59;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.item-content{flex:1;display:flex;align-items:baseline;gap:8px;min-width:0}
+.item-name{font-size:15px;font-weight:500}
+.item-name.strike{text-decoration:line-through}
+.item-qty{font-size:12px;color:#888;flex-shrink:0}
+.del-btn{background:none;border:none;color:#555;font-size:14px;padding:4px 8px;flex-shrink:0}
+
+.checked-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;color:#888;font-size:13px;font-weight:600;padding:10px 16px 6px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Empty */
+.empty{text-align:center;padding:80px 20px}
+.empty-icon{font-size:64px;margin-bottom:16px}
+.empty p{color:#888;font-size:15px}
+.empty p:last-child{color:#666;font-size:13px;margin-top:4px}
+
+/* FAB */
+.fab{position:fixed;bottom:28px;right:24px;width:56px;height:56px;border-radius:50%;background:#4a7c59;color:#fff;border:none;font-size:28px;font-weight:300;box-shadow:0 4px 24px rgba(74,124,89,.4);z-index:20;display:flex;align-items:center;justify-content:center}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#1a1a1a;border-radius:20px 20px 0 0;padding:20px 20px 32px;width:100%;max-width:480px;max-height:85vh;overflow:auto;animation:slideUp .25s ease}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-size:18px;font-weight:700}
+.close-btn{background:none;border:none;color:#888;font-size:20px;padding:4px 8px}
+
+.input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eee;font-size:15px;margin-bottom:10px;font-family:inherit}
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 16px}
+.cat-chip{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#aaa;font-size:13px;text-align:left}
+.cat-chip.active{border:none;color:#fff}
+.primary-btn{width:100%;padding:14px;border-radius:12px;border:none;background:#4a7c59;color:#fff;font-size:16px;font-weight:600;margin-top:4px;font-family:inherit}
+.primary-btn:disabled{opacity:.4}
+
+/* Setup */
+.setup-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.setup-card{background:#1a1a1a;border-radius:20px;padding:28px;max-width:400px;width:100%;text-align:center}
+.setup-title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.setup-sub{color:#888;font-size:13px;margin-bottom:24px}
+.setup-box{text-align:left;margin-bottom:16px;padding:12px;background:rgba(255,255,255,.03);border-radius:10px}
+.setup-box h3{font-size:14px;font-weight:700;color:#4a7c59;margin-bottom:4px}
+.setup-box p{font-size:13px;color:#aaa;line-height:1.5}
+.setup-box code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:13px}
+.label{display:block;font-size:12px;color:#888;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.error-msg{color:#e74c3c;font-size:13px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const CATEGORIES=[
+{id:"fruits-legumes",label:"Fruits & Légumes",emoji:"🥬",color:"#4a7c59"},
+{id:"boucherie",label:"Boucherie & Poissonnerie",emoji:"🥩",color:"#c0392b"},
+{id:"cremerie",label:"Crèmerie",emoji:"🧀",color:"#f0c040"},
+{id:"epicerie",label:"Épicerie",emoji:"🫙",color:"#b5651d"},
+{id:"boulangerie",label:"Boulangerie",emoji:"🥖",color:"#d4a056"},
+{id:"surgeles",label:"Surgelés",emoji:"🧊",color:"#5dade2"},
+{id:"boissons",label:"Boissons",emoji:"🍷",color:"#8e44ad"},
+{id:"hygiene",label:"Hygiène & Beauté",emoji:"🧴",color:"#e8a0bf"},
+{id:"maison",label:"Maison & Entretien",emoji:"🏠",color:"#2c7a7b"},
+{id:"autre",label:"Autre",emoji:"📦",color:"#7f8c8d"}
+];
+
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const $=s=>document.querySelector(s);
+
+let state={items:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showChecked:false,showSettings:false};
+let syncTimer=null;
+
+// ── Gist API ──
+async function gistLoad(){
+  const r=await fetch(`https://api.github.com/gists/${state.gistId}`,{headers:{Authorization:`Bearer ${state.token}`,Accept:"application/vnd.github+json"}});
+  if(!r.ok)throw new Error(`GitHub ${r.status}`);
+  const g=await r.json();const c=g.files["courses.json"]?.content;
+  return c?JSON.parse(c):{items:[]};
+}
+async function gistSave(data){
+  const r=await fetch(`https://api.github.com/gists/${state.gistId}`,{method:"PATCH",headers:{Authorization:`Bearer ${state.token}`,Accept:"application/vnd.github+json","Content-Type":"application/json"},body:JSON.stringify({files:{"courses.json":{content:JSON.stringify(data,null,2)}}})});
+  if(!r.ok)throw new Error(`GitHub ${r.status}`);
+}
+
+async function pull(){
+  if(!state.token||!state.gistId)return;
+  state.syncing=true;render();
+  try{const d=await gistLoad();state.items=d.items||[];state.lastSync=new Date();state.error="";}
+  catch(e){state.error="Erreur synchro : "+e.message;}
+  state.syncing=false;render();
+}
+async function push(){
+  if(!state.token||!state.gistId)return;
+  state.syncing=true;render();
+  try{await gistSave({items:state.items,lastModified:new Date().toISOString()});state.lastSync=new Date();state.error="";}
+  catch(e){state.error="Erreur sauvegarde : "+e.message;}
+  state.syncing=false;render();
+}
+
+function startSync(){pull();syncTimer=setInterval(pull,15000);}
+function stopSync(){clearInterval(syncTimer);}
+
+// ── Actions ──
+function addItem(name,qty,category){
+  state.items.push({id:uid(),name,qty,category,checked:false,addedAt:new Date().toISOString()});
+  push();render();
+}
+function toggleItem(id){
+  const i=state.items.find(x=>x.id===id);if(i)i.checked=!i.checked;
+  push();render();
+}
+function deleteItem(id){
+  state.items=state.items.filter(x=>x.id!==id);
+  push();render();
+}
+function clearChecked(){
+  state.items=state.items.filter(x=>!x.checked);
+  push();render();
+}
+
+// ── Setup ──
+function renderSetup(){
+  return`<div class="setup-wrap"><div class="setup-card">
+    <div style="font-size:48px;margin-bottom:8px">🛒</div>
+    <h1 class="setup-title">Courses à deux</h1>
+    <p class="setup-sub">Configuration unique — tu ne reverras plus cet écran</p>
+    <div class="setup-box"><h3>1. Crée un Gist sur GitHub</h3><p>Va sur <strong>gist.github.com</strong>, crée un Gist avec un fichier nommé <code>courses.json</code> contenant <code>{}</code></p></div>
+    <div class="setup-box"><h3>2. Génère un token GitHub</h3><p>Settings → Developer settings → Personal access tokens → Fine-grained → permission <strong>Gists: Read & Write</strong></p></div>
+    <label class="label">Token GitHub</label>
+    <input class="input" type="password" id="inp-token" placeholder="github_pat_...">
+    <label class="label">ID du Gist</label>
+    <input class="input" id="inp-gist" placeholder="abc123def456...">
+    <div id="setup-error"></div>
+    <button class="primary-btn" id="btn-setup">C'est parti !</button>
+  </div></div>`;
+}
+
+// ── Modal ──
+function renderModal(){
+  if(!state.showAdd)return"";
+  return`<div class="overlay" id="overlay"><div class="modal">
+    <div class="modal-head"><h2 class="modal-title">Ajouter un article</h2><button class="close-btn" id="btn-close-modal">✕</button></div>
+    <input class="input" id="inp-name" placeholder="Ex: Tomates, Lait...">
+    <input class="input" id="inp-qty" placeholder="Quantité (optionnel) : 500g, x3...">
+    <div class="cat-grid">${CATEGORIES.map(c=>`<button class="cat-chip${state._addCat===c.id?" active":""}" data-cat="${c.id}" style="${state._addCat===c.id?`background:${c.color};color:#fff;border:none`:""}">${c.emoji} <span style="font-size:12px">${c.label}</span></button>`).join("")}</div>
+    <button class="primary-btn" id="btn-add-item">Ajouter</button>
+  </div></div>`;
+}
+
+// ── Main ──
+function renderApp(){
+  const unchecked=state.items.filter(i=>!i.checked);
+  const checked=state.items.filter(i=>i.checked);
+  const grouped=CATEGORIES.map(c=>({...c,items:unchecked.filter(i=>i.category===c.id)})).filter(g=>g.items.length>0);
+
+  let syncText=state.error?`<span class="sync-bar error">${state.error}</span>`:`<span class="sync-bar">${state.syncing?"Synchro...":state.lastSync?`Synchro ${state.lastSync.toLocaleTimeString("fr-FR")}`:""} · ${unchecked.length} article${unchecked.length!==1?"s":""}${checked.length>0?` · ${checked.length} fait${checked.length!==1?"s":""}`:""}</span>`;
+
+  let settings=state.showSettings?`<div class="settings">
+    <button id="btn-clear">🗑 Vider les articles cochés (${checked.length})</button>
+    <button class="danger" id="btn-logout">↪ Déconnecter ce téléphone</button>
+  </div>`:"";
+
+  let list="";
+  if(grouped.length===0&&checked.length===0){
+    list=`<div class="empty"><div class="empty-icon">🛒</div><p>La liste est vide !</p><p>Appuie sur + pour ajouter des articles</p></div>`;
+  }else{
+    grouped.forEach(g=>{
+      list+=`<div class="group-head"><span class="group-dot" style="background:${g.color}"></span><span class="group-label">${g.emoji} ${g.label}</span><span class="group-count">${g.items.length}</span></div>`;
+      g.items.forEach(i=>{
+        list+=`<div class="item"><button class="checkbox" data-toggle="${i.id}"><div class="box"></div></button><div class="item-content"><span class="item-name">${i.name}</span>${i.qty?`<span class="item-qty">${i.qty}</span>`:""}</div><button class="del-btn" data-del="${i.id}">✕</button></div>`;
+      });
+    });
+    if(checked.length>0){
+      list+=`<button class="checked-head" id="btn-toggle-checked"><span>✅ Fait (${checked.length})</span><span style="font-size:12px">${state.showChecked?"▲":"▼"}</span></button>`;
+      if(state.showChecked){
+        checked.forEach(i=>{
+          list+=`<div class="item checked"><button class="checkbox" data-toggle="${i.id}"><div class="box done">✓</div></button><span class="item-name strike">${i.name}</span></div>`;
+        });
+      }
+    }
+  }
+
+  return`<div class="app">
+    <header class="header"><div class="header-top"><h1 class="logo">🛒 Courses</h1><div style="display:flex;gap:4px"><button class="icon-btn" id="btn-sync"><span style="display:inline-block;${state.syncing?"animation:spin 1s linear infinite":""}">⟳</span></button><button class="icon-btn" id="btn-settings">⚙</button></div></div><div>${syncText}</div></header>
+    ${settings}
+    <main style="padding:8px 0">${list}</main>
+    <button class="fab" id="btn-fab">+</button>
+    ${renderModal()}
+  </div>`;
+}
+
+// ── Render + Events ──
+function render(){
+  const app=$("#app");
+  const isSetup=state.token&&state.gistId;
+  app.innerHTML=isSetup?renderApp():renderSetup();
+  bindEvents(isSetup);
+}
+
+function bindEvents(isSetup){
+  if(!isSetup){
+    $("#btn-setup")?.addEventListener("click",async()=>{
+      const t=$("#inp-token").value.trim();const g=$("#inp-gist").value.trim();
+      if(!t||!g)return;
+      state.token=t;state.gistId=g;
+      try{await gistLoad();localStorage.setItem("courses_token",t);localStorage.setItem("courses_gist_id",g);startSync();render();}
+      catch(e){$("#setup-error").innerHTML=`<p class="error-msg">Impossible de se connecter. Vérifie ton token et l'ID du Gist.</p>`;state.token="";state.gistId="";}
+    });
+    return;
+  }
+
+  $("#btn-sync")?.addEventListener("click",pull);
+  $("#btn-settings")?.addEventListener("click",()=>{state.showSettings=!state.showSettings;render();});
+  $("#btn-clear")?.addEventListener("click",clearChecked);
+  $("#btn-logout")?.addEventListener("click",()=>{stopSync();localStorage.removeItem("courses_token");localStorage.removeItem("courses_gist_id");state.token="";state.gistId="";state.items=[];state.showSettings=false;render();});
+  $("#btn-toggle-checked")?.addEventListener("click",()=>{state.showChecked=!state.showChecked;render();});
+  $("#btn-fab")?.addEventListener("click",()=>{state.showAdd=true;state._addCat="epicerie";render();setTimeout(()=>$("#inp-name")?.focus(),100);});
+
+  // Modal
+  $("#overlay")?.addEventListener("click",e=>{if(e.target.id==="overlay"){state.showAdd=false;render();}});
+  $("#btn-close-modal")?.addEventListener("click",()=>{state.showAdd=false;render();});
+  document.querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{state._addCat=b.dataset.cat;render();setTimeout(()=>$("#inp-name")?.focus(),50);}));
+  $("#btn-add-item")?.addEventListener("click",()=>{
+    const n=$("#inp-name")?.value.trim();const q=$("#inp-qty")?.value.trim();
+    if(!n)return;addItem(n,q,state._addCat||"epicerie");
+    $("#inp-name").value="";$("#inp-qty").value="";$("#inp-name").focus();
+  });
+  $("#inp-name")?.addEventListener("keydown",e=>{if(e.key==="Enter"){$("#btn-add-item")?.click();}});
+  $("#inp-qty")?.addEventListener("keydown",e=>{if(e.key==="Enter"){$("#btn-add-item")?.click();}});
+
+  // Item actions
+  document.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>toggleItem(b.dataset.toggle)));
+  document.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>deleteItem(b.dataset.del)));
+}
+
+// ── Init ──
+state._addCat="epicerie";
+render();
+if(state.token&&state.gistId)startSync();
+</script>
+</body>
+</html>
