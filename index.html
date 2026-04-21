@@ -29,7 +29,10 @@ button{cursor:pointer;font-family:inherit}
 .search-wrap{padding:8px 16px 4px;position:sticky;top:56px;z-index:9;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .search-box{position:relative}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none}
-.search-input{width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eee;font-size:14px;font-family:inherit}
+.search-input{width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eee;font-size:16px;font-family:inherit}
+.mode-row{display:flex;justify-content:flex-end;padding:6px 16px 2px}
+.mode-toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:#aaa}
+.mode-toggle input{accent-color:#4a7c59}
 
 .settings{background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);padding:8px 16px}
 .settings button{display:block;width:100%;background:none;border:none;color:#ccc;font-size:14px;padding:10px 0;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
@@ -69,7 +72,11 @@ button{cursor:pointer;font-family:inherit}
 .modal-title{font-size:18px;font-weight:700}
 .close-btn{background:none;border:none;color:#888;font-size:20px;padding:4px 8px}
 
-.input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eee;font-size:15px;margin-bottom:10px;font-family:inherit}
+.input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eee;font-size:16px;margin-bottom:10px;font-family:inherit}
+.input-hint{font-size:12px;color:#777;margin:-4px 0 10px}
+.quick-qty{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 12px}
+.quick-qty-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#bbb;font-size:12px;border-radius:999px;padding:6px 10px}
+.quick-qty-btn:hover{border-color:rgba(255,255,255,.35);color:#eee}
 .cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 16px}
 .cat-chip{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#aaa;font-size:13px;text-align:left}
 .cat-chip.active{border:none;color:#fff}
@@ -113,11 +120,13 @@ const BASE_CAT=[
 ];
 const EMOJIS=["🐱","🐶","🍕","🎉","💊","🧹","🪴","🍼","🎮","🏋️","📚","🎁"];
 const COLORS=["#e67e22","#e74c3c","#3498db","#2ecc71","#9b59b6","#1abc9c","#f39c12","#e84393"];
+const QUICK_QTY=["x2","x3","500g","1kg","1L","2L"];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const $=s=>document.querySelector(s);
 const esc=s=>s.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const cleanInput=s=>s.trim().replace(/\s+/g," ");
 
-let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,search:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_cur:null,_open:{}};
+let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,search:"",shoppingMode:localStorage.getItem("courses_shopping_mode")==="1",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_cur:null,_open:{}};
 let syncT=null;
 function cats(){return[...BASE_CAT,...S.cc];}
 function catById(id){return cats().find(c=>c.id===id)||{emoji:"📦",label:id,color:"#7f8c8d"};}
@@ -167,29 +176,30 @@ function renderSetup(){
 function renderApp(){
   const q=S.search.toLowerCase().trim();
   const fil=q?S.items.filter(i=>i.name.toLowerCase().includes(q)):S.items;
+  const inCourse=S.shoppingMode;
   const tU=S.items.filter(i=>!i.checked).length,tD=S.items.filter(i=>i.checked).length;
 
   const grouped=cats().map(c=>{
     const u=fil.filter(i=>!i.checked&&i.category===c.id);
     const d=fil.filter(i=>i.checked&&i.category===c.id);
     return{...c,u,d};
-  }).filter(g=>g.u.length>0||g.d.length>0);
+  }).filter(g=>inCourse?g.u.length>0:(g.u.length>0||g.d.length>0));
 
   const sync=S.error?`<span class="sync-bar error">${esc(S.error)}</span>`:`<span class="sync-bar">${S.syncing?"Synchro...":S.lastSync?"Synchro "+S.lastSync.toLocaleTimeString("fr-FR"):""} · ${tU} à prendre${tD>0?" · "+tD+" fait"+(tD>1?"s":""):""}</span>`;
 
   let set=S.showSettings?`<div class="settings"><button id="btn-clear">🗑 Vider les cochés (${tD})</button><button class="danger" id="btn-logout">↪ Déconnecter</button></div>`:"";
 
   let list="";
-  if(!grouped.length&&!q)list=`<div class="empty"><div style="font-size:64px;margin-bottom:16px">🛒</div><p style="color:#888;font-size:15px">La liste est vide !</p><p style="color:#666;font-size:13px;margin-top:4px">Appuie sur + pour ajouter</p></div>`;
+  if(!grouped.length&&!q)list=inCourse?`<div class="empty"><div style="font-size:64px;margin-bottom:16px">✅</div><p style="color:#888;font-size:15px">Tout est acheté !</p></div>`:`<div class="empty"><div style="font-size:64px;margin-bottom:16px">🛒</div><p style="color:#888;font-size:15px">La liste est vide !</p><p style="color:#666;font-size:13px;margin-top:4px">Appuie sur + pour ajouter</p></div>`;
   else if(!grouped.length&&q)list=`<div class="empty"><p style="color:#888;font-size:15px">Aucun résultat pour «\u00a0${esc(q)}\u00a0»</p></div>`;
   else grouped.forEach(g=>{
     // Default: open if has unchecked items, closed if only checked
     if(S._open[g.id]===undefined)S._open[g.id]=g.u.length>0;
     const isOpen=S._open[g.id];
-    list+=`<div class="group-head" data-grp="${g.id}"><span class="group-dot" style="background:${g.color}"></span><span class="group-label">${g.emoji} ${esc(g.label)}</span><span class="group-count">${g.u.length}/${g.u.length+g.d.length}</span><span class="group-chevron${isOpen?" open":""}">▼</span></div>`;
+    list+=`<div class="group-head" data-grp="${g.id}"><span class="group-dot" style="background:${g.color}"></span><span class="group-label">${g.emoji} ${esc(g.label)}</span><span class="group-count">${inCourse?g.u.length:(g.u.length+"/"+(g.u.length+g.d.length))}</span><span class="group-chevron${isOpen?" open":""}">▼</span></div>`;
     list+=`<div class="group-items${isOpen?"":" collapsed"}">`;
     g.u.forEach(i=>{list+=renderItem(i,q,false);});
-    if(g.d.length){
+    if(g.d.length&&!inCourse){
       list+=`<div class="sep"><span>fait${g.d.length>1?"s":""}</span></div>`;
       g.d.forEach(i=>{list+=renderItem(i,q,true);});
     }
@@ -201,6 +211,7 @@ function renderApp(){
 
   return`<div class="app">
   <header class="header"><div class="header-top"><h1 class="logo">🛒 Courses</h1><div style="display:flex;gap:4px"><button class="icon-btn" id="btn-sync"><span style="display:inline-block;${S.syncing?"animation:spin 1s linear infinite":""}">⟳</span></button><button class="icon-btn" id="btn-settings">⚙</button></div></div><div>${sync}</div></header>
+  <div class="mode-row"><label class="mode-toggle"><input type="checkbox" id="inp-course"${inCourse?" checked":""}>Je suis en course</label></div>
   <div class="search-wrap"><div class="search-box"><span class="search-icon">🔍</span><input class="search-input" id="inp-search" placeholder="Rechercher..." value="${esc(S.search)}"></div></div>
   ${set}<main style="padding:8px 0">${list}</main>
   <button class="fab" id="btn-fab">+</button>${addM}${catM}</div>`;
@@ -212,12 +223,16 @@ function renderItem(i,q,done){
 
 function renderAddModal(){
   const cs=cats();
+  const suggestions=[...new Set(S.items.map(i=>i.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr",{sensitivity:"base"})).slice(0,30);
   return`<div class="overlay" id="ov"><div class="modal">
   <div class="modal-head"><h2 class="modal-title">Ajouter un article</h2><button class="close-btn" id="btn-cm">✕</button></div>
-  <input class="input" id="inp-name" placeholder="Ex: Tomates, Lait...">
+  <input class="input" id="inp-name" list="item-suggestions" autocomplete="off" placeholder="Ex: Tomates, Lait...">
+  <datalist id="item-suggestions">${suggestions.map(n=>`<option value="${esc(n)}"></option>`).join("")}</datalist>
+  <div class="input-hint" id="name-hint">Nom de l'article</div>
   <input class="input" id="inp-qty" placeholder="Quantité (optionnel) : 500g, x3...">
+  <div class="quick-qty">${QUICK_QTY.map(q=>`<button class="quick-qty-btn" data-qq="${q}" type="button">${q}</button>`).join("")}</div>
   <div class="cat-grid">${cs.map(c=>`<button class="cat-chip${S._ac===c.id?" active":""}" data-cat="${c.id}" style="${S._ac===c.id?`background:${c.color};color:#fff;border:none`:""}">${c.emoji} <span style="font-size:12px">${esc(c.label)}</span></button>`).join("")}<button class="cat-chip add-new" id="btn-nc">＋ Catégorie</button></div>
-  <button class="primary-btn" id="btn-ai">Ajouter</button>
+  <button class="primary-btn" id="btn-ai" disabled>Ajouter</button>
   </div></div>`;
 }
 
@@ -243,6 +258,7 @@ function bind(ok){
     });return;
   }
   $("#inp-search")?.addEventListener("input",e=>{S.search=e.target.value;S._cur=e.target.selectionStart;R();$("#inp-search")?.focus();});
+  $("#inp-course")?.addEventListener("change",e=>{S.shoppingMode=!!e.target.checked;localStorage.setItem("courses_shopping_mode",S.shoppingMode?"1":"0");R();});
   $("#btn-sync")?.addEventListener("click",pull);
   $("#btn-settings")?.addEventListener("click",()=>{S.showSettings=!S.showSettings;R();});
   $("#btn-clear")?.addEventListener("click",clearDone);
@@ -250,12 +266,27 @@ function bind(ok){
   $("#btn-fab")?.addEventListener("click",()=>{S.showAdd=true;S._ac="epicerie";R();setTimeout(()=>$("#inp-name")?.focus(),100);});
 
   // Add modal
+  const refreshAddCta=()=>{
+    const raw=$("#inp-name")?.value||"";
+    const clean=cleanInput(raw);
+    const btn=$("#btn-ai"),hint=$("#name-hint");
+    if(hint)hint.textContent=clean?`${clean.length} caractère${clean.length>1?"s":""}`:"Nom de l'article";
+    if(btn)btn.disabled=!clean;
+  };
   $("#ov")?.addEventListener("click",e=>{if(e.target.id==="ov"){S.showAdd=false;R();}});
   $("#btn-cm")?.addEventListener("click",()=>{S.showAdd=false;R();});
   document.querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{S._ac=b.dataset.cat;R();setTimeout(()=>$("#inp-name")?.focus(),50);}));
-  $("#btn-ai")?.addEventListener("click",()=>{const n=$("#inp-name")?.value.trim(),q=$("#inp-qty")?.value.trim();if(!n)return;addItem(n,q,S._ac||"epicerie");if($("#inp-name")){$("#inp-name").value="";$("#inp-qty").value="";$("#inp-name").focus();}});
-  $("#inp-name")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#btn-ai")?.click();});
+  document.querySelectorAll("[data-qq]").forEach(b=>b.addEventListener("click",()=>{const qi=$("#inp-qty");if(!qi)return;qi.value=b.dataset.qq||"";qi.focus();}));
+  $("#btn-ai")?.addEventListener("click",()=>{
+    const n=cleanInput($("#inp-name")?.value||""),q=cleanInput($("#inp-qty")?.value||"");
+    if(!n)return;
+    addItem(n,q,S._ac||"epicerie");
+    if($("#inp-name")){$("#inp-name").value="";$("#inp-qty").value="";refreshAddCta();$("#inp-name").focus();}
+  });
+  $("#inp-name")?.addEventListener("input",refreshAddCta);
+  $("#inp-name")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if($("#inp-qty")?.value.trim())$("#btn-ai")?.click();else $("#inp-qty")?.focus();}});
   $("#inp-qty")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#btn-ai")?.click();});
+  refreshAddCta();
 
   // New category
   $("#btn-nc")?.addEventListener("click",()=>{S.showAdd=false;S.showAddCat=true;S._ce=EMOJIS[0];S._ccl=COLORS[0];R();});
