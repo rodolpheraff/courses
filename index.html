@@ -117,7 +117,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const $=s=>document.querySelector(s);
 const esc=s=>s.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,search:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_cur:null,_open:{}};
+let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,showManageCats:false,search:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_cur:null,_open:{}};
 let syncT=null;
 function cats(){return[...BASE_CAT,...S.cc];}
 function catById(id){return cats().find(c=>c.id===id)||{emoji:"📦",label:id,color:"#7f8c8d"};}
@@ -140,6 +140,7 @@ function toggle(id){const i=S.items.find(x=>x.id===id);if(i)i.checked=!i.checked
 function del(id){S.items=S.items.filter(x=>x.id!==id);push();R();}
 function clearDone(){S.items=S.items.filter(x=>!x.checked);push();R();}
 function addCat(l,e,c){const id=l.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"-");if(cats().find(x=>x.id===id))return id;S.cc.push({id,label:l,emoji:e,color:c});push();return id;}
+function delCat(id){S.cc=S.cc.filter(c=>c.id!==id);S.items=S.items.map(i=>i.category===id?{...i,category:"autre"}:i);push();R();}
 
 function hl(t,q){if(!q)return esc(t);const lo=t.toLowerCase(),idx=lo.indexOf(q);if(idx===-1)return esc(t);return esc(t.slice(0,idx))+'<mark style="background:#4a7c59;color:#fff;border-radius:2px;padding:0 2px">'+esc(t.slice(idx,idx+q.length))+"</mark>"+esc(t.slice(idx+q.length));}
 
@@ -177,7 +178,7 @@ function renderApp(){
 
   const sync=S.error?`<span class="sync-bar error">${esc(S.error)}</span>`:`<span class="sync-bar">${S.syncing?"Synchro...":S.lastSync?"Synchro "+S.lastSync.toLocaleTimeString("fr-FR"):""} · ${tU} à prendre${tD>0?" · "+tD+" fait"+(tD>1?"s":""):""}</span>`;
 
-  let set=S.showSettings?`<div class="settings"><button id="btn-clear">🗑 Vider les cochés (${tD})</button><button class="danger" id="btn-logout">↪ Déconnecter</button></div>`:"";
+  let set=S.showSettings?`<div class="settings"><button id="btn-clear">🗑 Vider les cochés (${tD})</button><button id="btn-manage-cats">🪴 Gérer les catégories</button><button class="danger" id="btn-logout">↪ Déconnecter</button></div>`:"";
 
   let list="";
   if(!grouped.length&&!q)list=`<div class="empty"><div style="font-size:64px;margin-bottom:16px">🛒</div><p style="color:#888;font-size:15px">La liste est vide !</p><p style="color:#666;font-size:13px;margin-top:4px">Appuie sur + pour ajouter</p></div>`;
@@ -198,12 +199,13 @@ function renderApp(){
 
   let addM=S.showAdd?renderAddModal():"";
   let catM=S.showAddCat?renderCatModal():"";
+  let manageM=S.showManageCats?renderManageCatsModal():"";
 
   return`<div class="app">
   <header class="header"><div class="header-top"><h1 class="logo">🛒 Courses</h1><div style="display:flex;gap:4px"><button class="icon-btn" id="btn-sync"><span style="display:inline-block;${S.syncing?"animation:spin 1s linear infinite":""}">⟳</span></button><button class="icon-btn" id="btn-settings">⚙</button></div></div><div>${sync}</div></header>
   <div class="search-wrap"><div class="search-box"><span class="search-icon">🔍</span><input class="search-input" id="inp-search" placeholder="Rechercher..." value="${esc(S.search)}"></div></div>
   ${set}<main style="padding:8px 0">${list}</main>
-  <button class="fab" id="btn-fab">+</button>${addM}${catM}</div>`;
+  <button class="fab" id="btn-fab">+</button>${addM}${catM}${manageM}</div>`;
 }
 
 function renderItem(i,q,done){
@@ -233,6 +235,16 @@ function renderCatModal(){
   </div></div>`;
 }
 
+
+function renderManageCatsModal(){
+  const cc=S.cc;
+  return `<div class="overlay" id="ov3"><div class="modal">
+  <div class="modal-head"><h2 class="modal-title">Gérer les catégories</h2><button class="close-btn" id="btn-mc-close">✕</button></div>
+  ${cc.length?`<p style="color:#888;font-size:13px;margin-bottom:10px">Supprimer une catégorie déplacera ses articles vers « Autre ».</p>`:`<p style="color:#888;font-size:14px">Aucune catégorie personnalisée.</p>`}
+  <div>${cc.map(c=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span>${c.emoji} ${esc(c.label)}</span><button class="del-btn" data-del-cat="${c.id}" style="color:#e74c3c">Supprimer</button></div>`).join("")}</div>
+  </div></div>`;
+}
+
 function bind(ok){
   if(!ok){
     $("#btn-setup")?.addEventListener("click",async()=>{
@@ -246,7 +258,8 @@ function bind(ok){
   $("#btn-sync")?.addEventListener("click",pull);
   $("#btn-settings")?.addEventListener("click",()=>{S.showSettings=!S.showSettings;R();});
   $("#btn-clear")?.addEventListener("click",clearDone);
-  $("#btn-logout")?.addEventListener("click",()=>{clearInterval(syncT);localStorage.removeItem("courses_token");localStorage.removeItem("courses_gist_id");S.token="";S.gistId="";S.items=[];S.cc=[];S.showSettings=false;R();});
+  $("#btn-manage-cats")?.addEventListener("click",()=>{S.showManageCats=true;R();});
+  $("#btn-logout")?.addEventListener("click",()=>{clearInterval(syncT);localStorage.removeItem("courses_token");localStorage.removeItem("courses_gist_id");S.token="";S.gistId="";S.items=[];S.cc=[];S.showSettings=false;S.showManageCats=false;R();});
   $("#btn-fab")?.addEventListener("click",()=>{S.showAdd=true;S._ac="epicerie";R();setTimeout(()=>$("#inp-name")?.focus(),100);});
 
   // Add modal
@@ -264,6 +277,11 @@ function bind(ok){
   document.querySelectorAll("[data-e]").forEach(b=>b.addEventListener("click",()=>{S._ce=b.dataset.e;R();}));
   document.querySelectorAll("[data-cl]").forEach(b=>b.addEventListener("click",()=>{S._ccl=b.dataset.cl;R();}));
   $("#btn-sc")?.addEventListener("click",()=>{const n=$("#inp-cn")?.value.trim();if(!n)return;const id=addCat(n,S._ce,S._ccl);S.showAddCat=false;S.showAdd=true;S._ac=id;R();});
+
+  // Manage categories
+  $("#ov3")?.addEventListener("click",e=>{if(e.target.id==="ov3"){S.showManageCats=false;R();}});
+  $("#btn-mc-close")?.addEventListener("click",()=>{S.showManageCats=false;R();});
+  document.querySelectorAll("[data-del-cat]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.delCat;const c=catById(id);if(confirm(`Supprimer la catégorie « ${c.label} » ?`))delCat(id);}));
 
   // Accordion
   document.querySelectorAll("[data-grp]").forEach(b=>b.addEventListener("click",()=>{S._open[b.dataset.grp]=!S._open[b.dataset.grp];R();}));
