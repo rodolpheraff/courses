@@ -22,14 +22,14 @@ button{cursor:pointer;font-family:inherit}
 
 .app{min-height:100vh;max-width:480px;margin:0 auto;padding-bottom:100px;position:relative}
 
-.header{position:sticky;top:0;z-index:10;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);padding:12px 16px 8px}
+.header{position:sticky;top:0;z-index:10;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);padding:calc(12px + env(safe-area-inset-top)) 16px 8px}
 .header-top{display:flex;justify-content:space-between;align-items:center}
 .logo{font-size:20px;font-weight:700;letter-spacing:-.5px}
 .icon-btn{background:none;border:none;color:#aaa;font-size:20px;padding:4px 8px;border-radius:8px}
 .sync-bar{margin-top:4px;font-size:11px;color:#888}
 .sync-bar.error{color:#e74c3c}
 
-.search-wrap{padding:8px 16px 4px;position:sticky;top:56px;z-index:9;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.search-wrap{padding:8px 16px 4px;position:sticky;top:calc(56px + env(safe-area-inset-top));z-index:9;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .search-box{position:relative}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none}
 .search-input{width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eee;font-size:16px;font-family:inherit}
@@ -48,7 +48,7 @@ button{cursor:pointer;font-family:inherit}
 .settings button{display:block;width:100%;background:none;border:none;color:#ccc;font-size:14px;padding:10px 0;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
 .settings button.danger{color:#e74c3c}
 
-.group-head{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;scroll-margin-top:104px;position:sticky;top:98px;background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:5;cursor:pointer;-webkit-user-select:none;user-select:none}
+.group-head{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;scroll-margin-top:calc(104px + env(safe-area-inset-top));position:sticky;top:calc(98px + env(safe-area-inset-top));background:rgba(17,17,17,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:5;cursor:pointer;-webkit-user-select:none;user-select:none}
 .group-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .group-label{font-size:13px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.5px;flex:1}
 .group-count{font-size:11px;color:#666}
@@ -111,7 +111,7 @@ button{cursor:pointer;font-family:inherit}
 
 /* ===== Mode Course ===== */
 .shop{min-height:100vh;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
-.shop-head{position:sticky;top:0;z-index:10;background:rgba(17,17,17,.97);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.shop-head{position:sticky;top:0;z-index:10;background:rgba(17,17,17,.97);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);padding:calc(14px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
 .shop-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .shop-title{font-size:17px;font-weight:800}
 .progress{height:9px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden}
@@ -149,12 +149,13 @@ const BASE_CAT=[
 ];
 const EMOJIS=["🐱","🐶","🍕","🎉","💊","🧹","🪴","🍼","🎮","🏋️","📚","🎁"];
 const COLORS=["#e67e22","#e74c3c","#3498db","#2ecc71","#9b59b6","#1abc9c","#f39c12","#e84393"];
-const VERSION="2026-05-30 · 2";
+const VERSION="2026-05-30 · 3";
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const now=()=>new Date().toISOString();
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const vibrate=ms=>{try{navigator.vibrate&&navigator.vibrate(ms||15);}catch(e){}};
+const byName=(a,b)=>a.name.localeCompare(b.name,"fr",{sensitivity:"base"});
 
 let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,shopMode:false,search:"",addName:"",addQty:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_open:{},_shopPanier:false};
 let syncT=null,syncDebounce=null,dirty=false,inFlight=false,syncQueued=false,_focus=null,_lastView="";
@@ -296,8 +297,8 @@ function renderApp(){
   const tU=items.filter(i=>!i.checked).length,tD=items.filter(i=>i.checked).length;
 
   const grouped=cats().map(c=>{
-    const u=fil.filter(i=>!i.checked&&i.category===c.id);
-    const d=fil.filter(i=>i.checked&&i.category===c.id);
+    const u=fil.filter(i=>!i.checked&&i.category===c.id).sort(byName);
+    const d=fil.filter(i=>i.checked&&i.category===c.id).sort(byName);
     return{...c,u,d};
   }).filter(g=>g.u.length>0||g.d.length>0);
 
@@ -357,7 +358,7 @@ function renderShop(){
     body=`<div class="shop-celebrate"><div style="font-size:64px">🎉</div><p style="font-size:20px;font-weight:800;margin-top:12px">Tout est pris&nbsp;!</p><p style="color:#888;margin-top:6px">${taken} article${taken>1?"s":""} dans le panier</p></div>
     <button class="shop-finish" id="btn-finish">✅ Terminer &amp; vider la liste</button>`;
   }else{
-    const groups=cats().map(c=>({...c,u:items.filter(i=>!i.checked&&i.category===c.id)})).filter(g=>g.u.length);
+    const groups=cats().map(c=>({...c,u:items.filter(i=>!i.checked&&i.category===c.id).sort(byName)})).filter(g=>g.u.length);
     groups.forEach(g=>{
       body+=`<div class="shop-grp"><span class="group-dot" style="background:${g.color}"></span>${g.emoji} ${esc(g.label)} · ${g.u.length}</div>`;
       g.u.forEach(i=>{body+=`<div class="shop-row" data-t="${i.id}"><div class="shop-check"></div><span class="shop-name">${esc(i.name)}</span>${i.qty?`<span class="shop-qty">${esc(i.qty)}</span>`:""}</div>`;});
@@ -365,7 +366,7 @@ function renderShop(){
   }
 
   let panier="";
-  const done=items.filter(i=>i.checked);
+  const done=items.filter(i=>i.checked).sort(byName);
   if(done.length){
     const open=S._shopPanier;
     panier=`<div class="shop-done-head" id="btn-panier"><span>🧺 Dans le panier (${done.length})</span><span class="group-chevron${open?" open":""}">▼</span></div>`;
