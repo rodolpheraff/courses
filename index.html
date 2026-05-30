@@ -76,15 +76,16 @@ button{cursor:pointer;font-family:inherit}
 
 .fab{position:fixed;bottom:28px;right:24px;width:56px;height:56px;border-radius:50%;background:#4a7c59;color:#fff;border:none;font-size:28px;font-weight:300;box-shadow:0 4px 24px rgba(74,124,89,.4);z-index:20;display:flex;align-items:center;justify-content:center}
 
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center}
-.modal{background:#1a1a1a;border-radius:20px 20px 0 0;padding:20px 20px 32px;width:100%;max-width:480px;max-height:85vh;overflow:auto;animation:slideUp .25s ease}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain}
+.modal{background:#1a1a1a;border-radius:20px 20px 0 0;padding:20px 20px 28px;width:100%;max-width:480px;max-height:85vh;overflow:auto;overscroll-behavior:contain;animation:slideUp .25s ease}
 .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .modal-title{font-size:18px;font-weight:700}
 .close-btn{background:none;border:none;color:#888;font-size:20px;padding:4px 8px}
 
 .input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eee;font-size:16px;margin-bottom:10px;font-family:inherit}
-.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 16px}
-.cat-chip{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#aaa;font-size:13px;text-align:left}
+.cat-grid{display:flex;gap:6px;overflow-x:auto;position:relative;margin:6px 0 14px;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cat-grid::-webkit-scrollbar{display:none}
+.cat-chip{flex-shrink:0;white-space:nowrap;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#aaa;font-size:13px;text-align:left}
 .cat-chip.active{border:none;color:#fff}
 .cat-chip.add-new{border:1px dashed rgba(255,255,255,.2);justify-content:center;color:#888}
 .primary-btn{width:100%;padding:14px;border-radius:12px;border:none;background:#4a7c59;color:#fff;font-size:16px;font-weight:600;margin-top:4px;font-family:inherit}
@@ -148,7 +149,7 @@ const BASE_CAT=[
 ];
 const EMOJIS=["🐱","🐶","🍕","🎉","💊","🧹","🪴","🍼","🎮","🏋️","📚","🎁"];
 const COLORS=["#e67e22","#e74c3c","#3498db","#2ecc71","#9b59b6","#1abc9c","#f39c12","#e84393"];
-const VERSION="2026-05-30 · 1";
+const VERSION="2026-05-30 · 2";
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const now=()=>new Date().toISOString();
 const $=s=>document.querySelector(s);
@@ -266,8 +267,12 @@ function R(){
   $("#app").innerHTML=ok?(S.shopMode?renderShop():renderApp()):renderSetup();
   _lastView=view;
   bind(ok);
+  // Bloque le scroll de l'arrière-plan quand une modale est ouverte
+  document.body.style.overflow=(ok&&(S.showAdd||S.showAddCat))?"hidden":"";
   if(_focus){const el=document.getElementById(_focus.id);if(el){el.focus();try{el.setSelectionRange(_focus.start,_focus.end);}catch(e){}}}
-  window.scrollTo(0,y);
+  // Centre le rayon sélectionné dans la ligne horizontale (sans bouger la page)
+  if(S.showAdd){const ac=document.querySelector(".cat-chip.active");if(ac){const g=ac.parentElement;g.scrollLeft=ac.offsetLeft-g.clientWidth/2+ac.clientWidth/2;}}
+  if(!(ok&&(S.showAdd||S.showAddCat)))window.scrollTo(0,y);
 }
 
 function renderSetup(){
@@ -376,6 +381,7 @@ function renderAddModal(){
   <div class="modal-head"><h2 class="modal-title">Ajouter un article</h2><button class="close-btn" id="btn-cm">✕</button></div>
   <input class="input" id="inp-name" placeholder="Ex: Tomates, Lait..." value="${esc(S.addName)}">
   <input class="input" id="inp-qty" placeholder="Quantité (optionnel) : 500g, x3..." value="${esc(S.addQty)}">
+  <label class="label">Rayon</label>
   <div class="cat-grid">${cs.map(c=>`<button class="cat-chip${S._ac===c.id?" active":""}" data-cat="${c.id}" style="${S._ac===c.id?`background:${c.color};color:#fff;border:none`:""}">${c.emoji} <span style="font-size:12px">${esc(c.label)}</span></button>`).join("")}<button class="cat-chip add-new" id="btn-nc">＋ Catégorie</button></div>
   <button class="primary-btn" id="btn-ai">Ajouter</button>
   </div></div>`;
