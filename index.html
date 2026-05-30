@@ -155,7 +155,7 @@ const esc=s=>String(s==null?"":s).replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const vibrate=ms=>{try{navigator.vibrate&&navigator.vibrate(ms||15);}catch(e){}};
 
 let S={items:[],cc:[],token:localStorage.getItem("courses_token")||"",gistId:localStorage.getItem("courses_gist_id")||"",syncing:false,lastSync:null,error:"",showAdd:false,showSettings:false,showAddCat:false,shopMode:false,search:"",addName:"",addQty:"",_ac:"epicerie",_ce:EMOJIS[0],_ccl:COLORS[0],_open:{},_shopPanier:false};
-let syncT=null,syncDebounce=null,dirty=false,inFlight=false,syncQueued=false,_focus=null;
+let syncT=null,syncDebounce=null,dirty=false,inFlight=false,syncQueued=false,_focus=null,_lastView="";
 
 function cats(){return[...BASE_CAT,...S.cc];}
 function liveItems(){return S.items.filter(i=>!i.deleted);}
@@ -240,7 +240,16 @@ function startSync(){
 }
 
 /* ---------- Mutations ---------- */
-function addItem(n,q,c){S.items.push({id:uid(),name:n,qty:q,category:c,checked:false,deleted:false,addedAt:now(),updatedAt:now()});scheduleSync();R();}
+function addItem(n,q,c,keepModal){
+  S.items.push({id:uid(),name:n,qty:q,category:c,checked:false,deleted:false,addedAt:now(),updatedAt:now()});
+  scheduleSync();
+  if(keepModal){ // modal ouvert : on vide les champs en place, sans reconstruire (pas de ré-animation)
+    S.addName="";S.addQty="";
+    const nm=$("#inp-name"),qt=$("#inp-qty");
+    if(qt)qt.value="";
+    if(nm){nm.value="";nm.focus();}
+  }else R();
+}
 function toggle(id){const i=S.items.find(x=>x.id===id);if(i){i.checked=!i.checked;i.updatedAt=now();vibrate();}scheduleSync();R();}
 function del(id){const i=S.items.find(x=>x.id===id);if(i){i.deleted=true;i.checked=false;i.updatedAt=now();}scheduleSync();R();}
 function clearDone(){liveItems().filter(i=>i.checked).forEach(i=>{i.deleted=true;i.updatedAt=now();});scheduleSync();R();}
@@ -250,10 +259,14 @@ function hl(t,q){if(!q)return esc(t);const lo=t.toLowerCase(),idx=lo.indexOf(q);
 
 /* ---------- Render ---------- */
 function R(){
-  const a=$("#app"),ok=S.token&&S.gistId;
-  a.innerHTML=ok?(S.shopMode?renderShop():renderApp()):renderSetup();
+  const ok=S.token&&S.gistId;
+  const view=!ok?"setup":S.shopMode?"shop":"app";
+  const y=(view===_lastView)?window.scrollY:0; // garde le scroll si on reste sur le même écran
+  $("#app").innerHTML=ok?(S.shopMode?renderShop():renderApp()):renderSetup();
+  _lastView=view;
   bind(ok);
   if(_focus){const el=document.getElementById(_focus.id);if(el){el.focus();try{el.setSelectionRange(_focus.start,_focus.end);}catch(e){}}}
+  window.scrollTo(0,y);
 }
 
 function renderSetup(){
@@ -412,8 +425,9 @@ function bind(ok){
   $("#btn-ai")?.addEventListener("click",()=>{
     const n=($("#inp-name")?.value||"").trim(),q=($("#inp-qty")?.value||"").trim();
     if(!n)return;
-    S.addName="";S.addQty="";_focus={id:"inp-name",start:0,end:0};
-    addItem(n,q,S._ac||"epicerie");
+    addItem(n,q,S._ac||"epicerie",true); // garde le modal ouvert (pas de bruit)
+    const btn=$("#btn-ai");
+    if(btn){btn.textContent="Ajouté ✓";setTimeout(()=>{const b=$("#btn-ai");if(b)b.textContent="Ajouter";},700);}
   });
   $("#inp-name")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#btn-ai")?.click();});
   $("#inp-qty")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#btn-ai")?.click();});
@@ -451,6 +465,11 @@ function bind(ok){
   document.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>toggle(b.dataset.t)));
   document.querySelectorAll("[data-d]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();del(b.dataset.d);}));
 }
+
+// Synchro immédiate quand on revient sur l'app ou qu'on repasse en ligne
+// (sync() ne fait rien si pas connecté) -> les deux voient vite les changements de l'autre
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&!inFlight)sync();});
+window.addEventListener("online",()=>{if(!inFlight)sync();});
 
 R();
 if(S.token&&S.gistId)startSync();
