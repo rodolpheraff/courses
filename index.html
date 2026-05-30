@@ -148,6 +148,7 @@ const BASE_CAT=[
 ];
 const EMOJIS=["🐱","🐶","🍕","🎉","💊","🧹","🪴","🍼","🎮","🏋️","📚","🎁"];
 const COLORS=["#e67e22","#e74c3c","#3498db","#2ecc71","#9b59b6","#1abc9c","#f39c12","#e84393"];
+const VERSION="2026-05-30 · 1";
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const now=()=>new Date().toISOString();
 const $=s=>document.querySelector(s);
@@ -298,7 +299,7 @@ function renderApp(){
   const st=statusText();
   const sync=`<span class="sync-bar${st.err?" error":""}" id="sync-bar">${st.html}</span>`;
 
-  let set=S.showSettings?`<div class="settings"><button id="btn-clear">🗑 Vider les cochés (${tD})</button><button class="danger" id="btn-logout">↪ Déconnecter</button></div>`:"";
+  let set=S.showSettings?`<div class="settings"><button id="btn-clear">🗑 Vider les cochés (${tD})</button><button class="danger" id="btn-logout">↪ Déconnecter</button><div style="font-size:11px;color:#555;padding:10px 0 2px">Version ${VERSION}</div></div>`:"";
 
   let cta=tU>0?`<div class="cta-wrap"><button class="shop-cta" id="btn-shop">🛒 Faire les courses · ${tU} à prendre</button></div>`:"";
 
